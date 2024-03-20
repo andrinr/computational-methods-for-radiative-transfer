@@ -1,9 +1,9 @@
 using Plots
 
-steps = 1000
+steps = 100
 L = 50
-dx = 1.0 / L
-dt = 0.0001
+dy = 1.0 / L
+dt = 10^(-4)
 
 function init_step(x::Float64)::Float64
 
@@ -21,18 +21,26 @@ function init_gauss(x::Float64, σ::Float64 = 0.1)::Float64
 
 end
 
-function second_derivative(x::Array{Float64, 1}, dx::Float64)::Array{Float64, 1}
+function f(y::Array{Float64, 1}, dx::Float64)::Array{Float64, 1}
 
-    x_ = cat([0.], x, dims=1)
-    x_ = cat(x_, [0.], dims=1)
+    y_ = cat([0.], y, dims=1)
+    y_ = cat(y_, [0.], dims=1)
 
-    return (x_[1:end-2] .- 2*x_[2:end-1] .+ x_[3:end]) ./ (dx*dx)
+    return (y_[1:end-2] .- 2*y_[2:end-1] .+ y_[3:end]) ./ (dx*dx)
 
 end
 
-function euler_step(Theta ::Array{Float64, 1}, dx ::Float64, dt ::Float64)::Array{Float64, 1}
+function euler_step(y ::Array{Float64, 1}, dx ::Float64, dt ::Float64)::Array{Float64, 1}
 
-    return Theta .+ dt .* second_derivative(Theta, dx)
+    return y .+ dt .* f(y, dx)
+
+end
+
+function runge_kutta_step(y::Array{Float64, 1}, dy::Float64, dt::Float64)::Array{Float64, 1}
+
+    y_star = y .+ 0.5 .* dt .* f(y, dy)
+
+    return y .+ dt .* f(y_star, dy)
 
 end
 
@@ -47,25 +55,43 @@ end
 
 x::Array{Float64, 1} = range(0, 1, length=L)
 
-Theta_step = zeros(Float64, (L, steps))
-Theta_step[:, 1] = init_step.(x)
-Theta_gauss = zeros(Float64, (L, steps))
-Theta_gauss[:, 1] = init_gauss.(x)
+Theta_euler_step = zeros(Float64, (L, steps))
+Theta_euler_step[:, 1] = init_step.(x)
+Theta_euler_gauss = zeros(Float64, (L, steps))
+Theta_euler_gauss[:, 1] = init_gauss.(x)
 
+Theta_runge_step = zeros(Float64, (L, steps))
+Theta_runge_step[:, 1] = init_step.(x)
+Theta_runge_gauss = zeros(Float64, (L, steps))
+Theta_runge_gauss[:, 1] = init_gauss.(x)
+
+println("Running the simulation...")
 for i in 2:steps
     # update the temperature fields
-    Theta_step[:, i] = euler_step(Theta_step[:, i-1], dx, dt)
-    Theta_step[:, i] = boundary(Theta_step[:, i])
+    Theta_euler_step[:, i] = euler_step(Theta_euler_step[:, i-1], dy, dt)
+    Theta_euler_step[:, i] = boundary(Theta_euler_step[:, i])
 
-    Theta_gauss[:, i] = euler_step(Theta_gauss[:, i-1], dx, dt)
-    Theta_gauss[:, i] = boundary(Theta_gauss[:, i])
+    Theta_euler_gauss[:, i] = euler_step(Theta_euler_gauss[:, i-1], dy, dt)
+    Theta_euler_gauss[:, i] = boundary(Theta_euler_gauss[:, i])
+
+    Theta_runge_step[:, i] = runge_kutta_step(Theta_runge_step[:, i-1], dy, dt)
+    Theta_runge_step[:, i] = boundary(Theta_runge_step[:, i])
+
+    Theta_runge_gauss[:, i] = runge_kutta_step(Theta_runge_gauss[:, i-1], dy, dt)
+    Theta_runge_gauss[:, i] = boundary(Theta_runge_gauss[:, i])
 end
 
-p1  = plot(Theta_step[:, 1:20:end], label="", title="Step initial condition")
-p2  = plot(Theta_gauss[:, 1:20:end], label="", title="Gaussian initial condition")
+println("Creating the gif...")
+anim = @animate for i in 1:1:steps
+    euler = plot(x, Theta_euler_step[:, i], label="Step init", title="Heat diffusion euler")
+    euler = plot!(x, Theta_euler_gauss[:, i], label="Gauss init", title="Heat diffusion euler")
+    ylims!(0, 1)
+    runge = plot(x, Theta_runge_step[:, i], label="Step init", title="Heat diffusion 2nd order RK")
+    runge = plot!(x, Theta_runge_gauss[:, i], label="Gauss init", title="Heat diffusion 2nd order RK")
+    ylims!(0, 1)
+    plot(euler, runge, layout=(1, 2), size=(800, 400))
+end
 
-plot(p1, p2, layout=(2, 1), size=(800, 800))
+gif(anim, "heat_diffusion.gif", fps = 30)
 
-gui()
-
-sleep(50)
+println("Done!")
