@@ -3,7 +3,7 @@ using Plots
 steps = 100
 L = 50
 dy = 1.0 / L
-dt = 10^(-4)
+dt = 10^(-4) 
 
 function init_step(x::Float64)::Float64
 
@@ -15,18 +15,19 @@ function init_step(x::Float64)::Float64
 
 end
 
-function init_gauss(x::Float64, σ::Float64 = 0.1)::Float64
+function init_gauss(x::Float64, sigma::Float64 = 0.1)::Float64
 
-    return exp(-(x - 0.5)^2 / (σ^2))
+    return exp(-(x - 0.5)^2 / (sigma^2))
 
 end
 
 function f(y::Array{Float64, 1}, dx::Float64)::Array{Float64, 1}
 
-    y_ = cat([0.], y, dims=1)
-    y_ = cat(y_, [0.], dims=1)
+    # add zero padding to the array
+    y_pad = cat([0.], y, dims=1)
+    y_pad = cat(y_pad, [0.], dims=1)
 
-    return (y_[1:end-2] .- 2*y_[2:end-1] .+ y_[3:end]) ./ (dx*dx)
+    return (y_pad[1:end-2] .- 2*y_pad[2:end-1] .+ y_pad[3:end]) ./ (dx*dx)
 
 end
 
@@ -38,8 +39,10 @@ end
 
 function runge_kutta_step(y::Array{Float64, 1}, dy::Float64, dt::Float64)::Array{Float64, 1}
 
+    # advance half time step
     y_star = y .+ 0.5 .* dt .* f(y, dy)
 
+    # advance another half step using the half step values
     return y .+ dt .* f(y_star, dy)
 
 end
@@ -65,6 +68,8 @@ Theta_runge_step[:, 1] = init_step.(x)
 Theta_runge_gauss = zeros(Float64, (L, steps))
 Theta_runge_gauss[:, 1] = init_gauss.(x)
 
+difference = zeros(Float64, (L, steps))
+
 println("Running the simulation...")
 for i in 2:steps
     # update the temperature fields
@@ -79,6 +84,9 @@ for i in 2:steps
 
     Theta_runge_gauss[:, i] = runge_kutta_step(Theta_runge_gauss[:, i-1], dy, dt)
     Theta_runge_gauss[:, i] = boundary(Theta_runge_gauss[:, i])
+
+    difference[:, i] = sum(abs.(Theta_euler_gauss[:, i] .- Theta_runge_gauss[:, i]))
+    println("Step: $i, diff: $diff")
 end
 
 println("Creating the gif...")
