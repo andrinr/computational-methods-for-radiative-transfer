@@ -28,6 +28,7 @@ MCRT review.
 from __future__ import print_function
 import numpy as np
 import numpy.random as random
+from matplotlib import pyplot as plt
 
 
 def p_esc_analytic(t):
@@ -174,9 +175,31 @@ class homogeneous_sphere_esc_abs(object):
 
 def main():
 
-    mcrt_esc_prop = homogeneous_sphere_esc_abs(2)
-    print("tau: {:.4e}, escape probability: {:.4e}".format(
-        mcrt_esc_prop.tau_sphere, mcrt_esc_prop.p_esc))
+    taus = np.logspace(-2, 2, 50, base=10)
+
+    albedos = np.array([0.01, 0.1, 0.5, 0.95])
+
+    for albedo in albedos:
+        probs = []
+        for tau in taus:
+            mcrt_esc_prop = homogeneous_sphere_esc_abs(tau, albedo=albedo)
+            probs.append(mcrt_esc_prop.p_esc)
+
+        # plot with crosses at data points
+        plt.plot(taus, probs, label="albedo={:.2f}".format(albedo))
+    
+    # set X axis log scale with base 10
+    plt.xscale('log')
+    # X axis is tau
+    plt.xlabel(r"$\tau$")
+    # Y axis is escape probability
+    plt.ylabel(r"$p_{\rm esc}$")
+    # set title
+    plt.title("Escape probability from a homogeneous sphere")
+
+    plt.legend()
+    plt.show()
+
 
 if __name__ == "__main__":
 
