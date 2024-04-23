@@ -175,8 +175,7 @@ class homogeneous_sphere_esc_abs(object):
 
 def main():
 
-    taus = np.logspace(-2, 2, 50, base=10)
-
+    taus = np.logspace(-2, 2, 20, base=10)
     albedos = np.array([0.01, 0.1, 0.5, 0.95])
 
     for albedo in albedos:
