@@ -3,8 +3,8 @@ using Plots
 steps = 100
 L = 50
 dy = 1.0 / L
-dt = 10^(-4) 
-dt 0.01
+# dt = 10^(-4) 
+dt = 0.01
 
 function init_step(x::Float64)::Float64
 
